@@ -1,123 +1,223 @@
 require 'logstash/devutils/rspec/spec_helper'
-require 'logstash/filters/rest'
+require 'logstash/filters/http'
 
-describe LogStash::Filters::Rest do
-  describe 'Set to Rest Filter Get without params' do
-    let(:config) do <<-CONFIG
-      filter {
-        rest {
-          request => {
-            url => 'http://jsonplaceholder.typicode.com/users/10'
-          }
-          json => true
-          target => 'rest'
-        }
-      }
-    CONFIG
+describe LogStash::Filters::Http do
+  subject { described_class.new(config) }
+  let(:event) { LogStash::Event.new(data) }
+  let(:data) { { "message" => "test" } }
+
+  describe 'response body handling' do
+    before(:each) { subject.register }
+    let(:url) { 'http://laceholder.typicode.com/users/10' }
+    let(:config) do
+      { "url" => url, "target_body" => 'rest' }
+    end
+    before(:each) do
+      allow(subject).to receive(:request_http).and_return(response)
+      subject.filter(event)
     end
 
-    sample('message' => 'some text') do
-      expect(subject).to include('rest')
-      expect(subject.get('rest')).to include('id')
-      expect(subject.get('[rest][id]')).to eq(10)
-      expect(subject.get('rest')).to_not include('fallback')
+    context "when body is text" do
+      let(:response) { [200, {}, "Bom dia"] }
+
+      it "fetches and writes body to target" do
+        expect(event.get('rest')).to eq("Bom dia")
+      end
+    end
+    context "when body is JSON" do
+      context "and headers are set correctly" do
+        let(:response) { [200, {"content-type" => "application/json"}, "{\"id\": 10}"] }
+
+        it "fetches and writes body to target" do
+          expect(event.get('[rest][id]')).to eq(10)
+        end
+      end
     end
   end
-  describe 'Set to Rest Filter Get without params custom target' do
-    let(:config) do <<-CONFIG
-      filter {
-        rest {
-          request => {
-            url => 'http://jsonplaceholder.typicode.com/users/10'
-          }
-          json => true
-          target => 'testing'
-        }
-      }
-    CONFIG
-    end
+  describe 'URL parameter' do
+    before(:each) { subject.register }
+    context "when url contains field references" do
+      let(:config) do
+        { "url" => "http://stringsize.com/%{message}", "target_body" => "size" }
+      end
+      let(:response) { [200, {}, "4"] }
 
-    sample('message' => 'some text') do
-      expect(subject).to include('testing')
-      expect(subject.get('testing')).to include('id')
-      expect(subject.get('[testing][id]')).to eq(10)
-      expect(subject.get('testing')).to_not include('fallback')
+      it "interpolates request url using event data" do
+        expect(subject).to receive(:request_http).with(anything, "http://stringsize.com/test", anything).and_return(response)
+        subject.filter(event)
+      end
     end
   end
-  describe 'Set to Rest Filter Get without params and sprintf' do
-    let(:config) do <<-CONFIG
-      filter {
-        rest {
-          request => {
-            url => "http://jsonplaceholder.typicode.com/users/%{message}"
-          }
-          json => true
-          sprintf => true
-          target => 'rest'
-        }
+  context 'when request returns 404' do
+    before(:each) { subject.register }
+    let(:config) do
+      {
+        'url' => 'http://httpstat.us/404',
+        'target_body' => 'rest'
       }
-    CONFIG
+    end
+    let(:response) { [404, {}, ""] }
+
+    before(:each) do
+      allow(subject).to receive(:request_http).and_return(response)
+      subject.filter(event)
     end
 
-    sample('message' => '10') do
-      expect(subject).to include('rest')
-      expect(subject.get('rest')).to include('id')
-      expect(subject.get('[rest][id]')).to eq(10)
-      expect(subject.get('rest')).to_not include('fallback')
-    end
-    sample('message' => '9') do
-      expect(subject).to include('rest')
-      expect(subject.get('rest')).to include('id')
-      expect(subject.get('[rest][id]')).to eq(9)
-      expect(subject.get('rest')).to_not include('fallback')
+    it "tags the event with _httprequestfailure" do
+      expect(event).to_not include('rest')
+      expect(event.get('tags')).to include('_httprequestfailure')
     end
   end
-  describe 'Set to Rest Filter Get without params http error' do
-    let(:config) do <<-CONFIG
-      filter {
-        rest {
-          request => {
-            url => 'http://httpstat.us/404'
-          }
-          json => true
-          target => 'rest'
+  describe "headers" do
+    before(:each) { subject.register }
+    let(:response) { [200, {}, "Bom dia"] }
+    context "when set" do
+      let(:headers) { { "Cache-Control" => "nocache" } }
+      let(:config) do
+        {
+          "url" => "http://stringsize.com",
+          "target_body" => "size",
+          "headers" => headers
         }
+      end
+      it "are included in the request" do
+        expect(subject).to receive(:request_http) do |verb, url, options|
+          expect(options.fetch(:headers, {})).to include(headers)
+        end.and_return(response)
+        subject.filter(event)
+      end
+    end
+  end
+  describe "query string parameters" do
+    before(:each) { subject.register }
+    let(:response) { [200, {}, "Bom dia"] }
+    context "when set" do
+      let(:query) { { "color" => "green" } }
+      let(:config) do
+        {
+          "url" => "http://stringsize.com/%{message}",
+          "target_body" => "size",
+          "query" => query
+        }
+      end
+      it "are included in the request" do
+        expect(subject).to receive(:request_http).with(anything, anything, include(:query => query)).and_return(response)
+        subject.filter(event)
+      end
+    end
+  end
+  describe "request body" do
+    before(:each) { subject.register }
+    let(:response) { [200, {}, "Bom dia"] }
+    let(:config) do
+      {
+        "url" => "http://stringsize.com",
+        "body" => body
       }
-    CONFIG
     end
 
-    sample('message' => 'some text') do
-      expect(subject).to_not include('rest')
-      expect(subject.get('tags')).to include('_restfailure')
-    end
-  end
-  describe 'Set to Rest Filter Get with params' do
-    let(:config) do <<-CONFIG
-      filter {
-        rest {
-          request => {
-            url => 'https://jsonplaceholder.typicode.com/posts'
-            params => {
-              userId => 10
-            }
-            headers => {
-              'Content-Type' => 'application/json'
-            }
-          }
-          json => true
-          target => 'rest'
+    describe "format" do
+      let(:config) do
+        {
+          "url" => "http://stringsize.com",
+          "body_format" => body_format,
+          "body" => body
         }
-      }
-    CONFIG
-    end
+      end
 
-    sample('message' => 'some text') do
-      expect(subject).to include('rest')
-      expect(subject.get('[rest][0]')).to include('userId')
-      expect(subject.get('[rest][0][userId]')).to eq(10)
-      expect(subject.get('rest')).to_not include('fallback')
+      context "when is json" do
+        let(:body_format) { "json" }
+        let(:body) do
+          { "hey" => "you" }
+        end
+        let(:body_json) { LogStash::Json.dump(body) }
+
+        it "serializes the body to json" do
+          expect(subject).to receive(:request_http) do |verb, url, options|
+            expect(options).to include(:body => body_json)
+          end.and_return(response)
+          subject.filter(event)
+        end
+        it "sets content-type to application/json" do
+          expect(subject).to receive(:request_http) do |verb, url, options|
+            expect(options).to include(:headers => { "content-type" => "application/json"})
+          end.and_return(response)
+          subject.filter(event)
+        end
+      end
+      context "when is text" do
+        let(:body_format) { "text" }
+        let(:body) { "Hey, you!" }
+
+        it "uses the text as body for the request" do
+          expect(subject).to receive(:request_http) do |verb, url, options|
+            expect(options).to include(:body => body)
+          end.and_return(response)
+          subject.filter(event)
+        end
+        it "sets content-type to text/plain" do
+          expect(subject).to receive(:request_http) do |verb, url, options|
+            expect(options).to include(:headers => { "content-type" => "text/plain"})
+          end.and_return(response)
+          subject.filter(event)
+        end
+      end
+    end
+    context "when using field references" do
+      let(:body_format) { "json" }
+      let(:body) do
+        { "%{key1}" => [ "%{[field1]}", "another_value", { "key" => "other-%{[nested][field2]}" } ] }
+      end
+      let(:body_json) { LogStash::Json.dump(body) }
+      let(:data) do
+        {
+          "message" => "ola",
+          "key1" => "mykey",
+          "field1" => "normal value",
+          "nested" => { "field2" => "value2" }
+        }
+      end
+
+      it "fills the body with event data" do
+        expect(subject).to receive(:request_http) do |verb, url, options|
+          body = options.fetch(:body, {})
+          expect(body.keys).to include("mykey")
+          expect(body.fetch("mykey")).to eq(["normal value", "another_value", { "key" => "other-value2" }])
+        end.and_return(response)
+        subject.filter(event)
+      end
     end
   end
+  describe "verb" do
+    let(:response) { [200, {}, "Bom dia"] }
+    let(:config) do
+      {
+        "verb" => verb,
+        "url" => "http://stringsize.com",
+        "target_body" => "size"
+      }
+    end
+    ["GET", "HEAD", "POST", "DELETE"].each do |verb_string|
+      let(:verb) { verb_string }
+      context "when verb #{verb_string} is set" do
+        before(:each) { subject.register }
+        it "it is used in the request" do
+          expect(subject).to receive(:request_http).with(verb.downcase, anything, anything).and_return(response)
+          subject.filter(event)
+        end
+      end
+    end
+    context "when using an invalid verb" do
+      let(:verb) { "something else" }
+      it "it is used in the request" do
+        expect { described_class.new(config) }.to raise_error ::LogStash::ConfigurationError
+      end
+    end
+  end
+end
+
+=begin
+  # TODO refactor remaning tests to avoid insist + whole pipeline instantiation
   describe 'empty response' do
     let(:config) do <<-CONFIG
       filter {
@@ -404,3 +504,4 @@ describe LogStash::Filters::Rest do
     end
   end
 end
+=end
