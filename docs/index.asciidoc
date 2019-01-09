@@ -100,8 +100,16 @@ If set to `"json"` the body will be serialized as JSON. Otherwise it is sent as 
 The HTTP headers to be sent in the request. Both the names of the headers and their
 values can reference values from event fields.
 
+[id="plugins-{type}s-{plugin}-query"]
+===== `query`
+
+  * Value type is <<hash,hash>>
+  * There is no default value
+
+Define the query string parameters (key-value pairs) to be sent in the HTTP request.
+
 [id="plugins-{type}s-{plugin}-target_body"]
-===== `target`
+===== `target_body`
 
   * Value type is <<hash,hash>>
   * There is no default value
@@ -109,7 +117,7 @@ values can reference values from event fields.
 Define the target field for placing the body of the HTTP response. If this setting is omitted, the data will be stored in the "body" field.
 
 [id="plugins-{type}s-{plugin}-target_headers"]
-===== `target`
+===== `target_headers`
 
   * Value type is <<hash,hash>>
   * There is no default value
