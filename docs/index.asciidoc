@@ -20,7 +20,31 @@ include::{include_path}/plugin_header.asciidoc[]
 
 ==== Description
 
-The HTTP filter provides integration with external web services/REST APIs.
+The HTTP filter integrates with external web services/REST APIs, and enables
+lookup enrichment against any HTTP service or endpoint. This plugin is well
+suited for many enrichment use cases, such as social APIs, sentiment APIs,
+security feed APIs, and business service APIs.
++
+TODO: TEST/VERIFY EXAMPLE
++
+[source,txt]
+-----
+filter {
+  http {
+    url => "http://example.com"
+    verb => GET
+    body => {
+      "user-id" => "%{user}"
+      "api-key" => "%{api_key}"
+    }
+    body_format => "json"
+    headers =>
+      "Content-type" => "application/json"
+    }
+    target_body => "new_field"
+  }
+}
+-----
 
 [id="plugins-{type}s-{plugin}-options"]
 ==== HTTP Filter Configuration Options
