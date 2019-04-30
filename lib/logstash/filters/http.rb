@@ -51,7 +51,7 @@ class LogStash::Filters::Http < LogStash::Filters::Base
 
     options = { :headers => headers_sprintfed, :query => query_sprintfed, :body => body_sprintfed }
 
-    @logger.debug? && @logger.debug('processing request', :url => url_for_event, :headers => headers_sprintfed, :parameters => parameters_sprintfed)
+    @logger.debug? && @logger.debug('processing request', :url => url_for_event, :headers => headers_sprintfed, :query => query_sprintfed)
     client_error = nil
 
     begin
@@ -62,7 +62,7 @@ class LogStash::Filters::Http < LogStash::Filters::Base
 
     if client_error
       @logger.error('error during HTTP request',
-                    :url => url_for_event, :body => @body,
+                    :url => url_for_event, :body => body_sprintfed,
                     :client_error => client_error.message)
       @tag_on_request_failure.each { |tag| event.tag(tag) }
     elsif !code.between?(200, 299)
