@@ -217,7 +217,7 @@ describe LogStash::Filters::Http do
 end
 
 =begin
-  # TODO refactor remaning tests to avoid insist + whole pipeline instantiation
+  # TODO refactor remaning tests to avoid whole pipeline instantiation
   describe 'empty response' do
     let(:config) do <<-CONFIG
       filter {
