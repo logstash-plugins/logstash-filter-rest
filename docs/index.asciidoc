@@ -52,7 +52,7 @@ There are also multiple configuration options related to the HTTP connectivity:
 | <<plugins-{type}s-{plugin}-connect_timeout>> |<<number,number>>|No
 | <<plugins-{type}s-{plugin}-cookies>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-follow_redirects>> |<<boolean,boolean>>|No
-| <<plugins-{type}s-{plugin}-return_errors>> |<<boolean,boolean>>|No
+| <<plugins-{type}s-{plugin}-ignore_errors>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-keepalive>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-keystore>> |a valid filesystem path|No
 | <<plugins-{type}s-{plugin}-keystore_password>> |<<password,password>>|No
