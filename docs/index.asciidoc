@@ -52,6 +52,7 @@ There are also multiple configuration options related to the HTTP connectivity:
 | <<plugins-{type}s-{plugin}-connect_timeout>> |<<number,number>>|No
 | <<plugins-{type}s-{plugin}-cookies>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-follow_redirects>> |<<boolean,boolean>>|No
+| <<plugins-{type}s-{plugin}-ignore_errors>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-keepalive>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-keystore>> |a valid filesystem path|No
 | <<plugins-{type}s-{plugin}-keystore_password>> |<<password,password>>|No
@@ -201,6 +202,15 @@ across requests as a normal web browser would. Enabled by default
   * Default value is `true`
 
 Should redirects be followed? Defaults to `true`
+
+[id="plugins-{type}s-{plugin}-ignore_errors"]
+===== `ignore_errors`
+
+  * Value type is <<boolean,boolean>>
+  * Default value is `false`
+
+Set to `true` if you want to also process failed requests. Keep in mind that
+the filter will always succeed, unless there is an exception.
 
 [id="plugins-{type}s-{plugin}-keepalive"]
 ===== `keepalive`

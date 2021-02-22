@@ -68,6 +68,26 @@ describe LogStash::Filters::Http do
       expect(event.get('tags')).to include('_httprequestfailure')
     end
   end
+  context 'when request returns 404 but ignores errors' do
+    before(:each) { subject.register }
+    let(:config) do
+      {
+        'url' => 'http://httpstat.us/404',
+        'target_body' => 'rest',
+        'ignore_errors' => true
+      }
+    end
+    let(:response) { [404, {}, "request failed"] }
+
+    before(:each) do
+      allow(subject).to receive(:request_http).and_return(response)
+      subject.filter(event)
+    end
+
+    it "fetches event and returns body" do
+      expect(event.get('rest')).to eq("request failed")
+    end
+  end
   describe "headers" do
     before(:each) { subject.register }
     let(:response) { [200, {}, "Bom dia"] }
