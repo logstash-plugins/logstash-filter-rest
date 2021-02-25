@@ -217,7 +217,7 @@ describe LogStash::Filters::Http do
         "target_body" => "size"
       }
     end
-    ["GET", "HEAD", "POST", "DELETE"].each do |verb_string|
+    ["GET", "HEAD", "POST", "DELETE", "PUT"].each do |verb_string|
       let(:verb) { verb_string }
       context "when verb #{verb_string} is set" do
         before(:each) { subject.register }
