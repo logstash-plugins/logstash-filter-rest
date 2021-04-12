@@ -52,7 +52,7 @@ There are also multiple configuration options related to the HTTP connectivity:
 | <<plugins-{type}s-{plugin}-connect_timeout>> |<<number,number>>|No
 | <<plugins-{type}s-{plugin}-cookies>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-follow_redirects>> |<<boolean,boolean>>|No
-| <<plugins-{type}s-{plugin}-ignore_errors>> |<<boolean,boolean>>|No
+| <<plugins-{type}s-{plugin}-ignorable_codes>> |<<number,number>>|No
 | <<plugins-{type}s-{plugin}-keepalive>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-keystore>> |a valid filesystem path|No
 | <<plugins-{type}s-{plugin}-keystore_password>> |<<password,password>>|No
@@ -203,14 +203,14 @@ across requests as a normal web browser would. Enabled by default
 
 Should redirects be followed? Defaults to `true`
 
-[id="plugins-{type}s-{plugin}-ignore_errors"]
-===== `ignore_errors`
+[id="plugins-{type}s-{plugin}-ignorable_codes"]
+===== `ignorable_codes`
 
-  * Value type is <<boolean,boolean>>
-  * Default value is `false`
+  * Value type is <<number,number>>
+  * There is no default for this setting.
 
-Set to `true` if you want to also process failed requests. Keep in mind that
-the filter will always succeed, unless there is an exception.
+If you would like to consider some non-2xx codes to be successes
+enumerate them here. Responses returning these codes will be considered successes
 
 [id="plugins-{type}s-{plugin}-keepalive"]
 ===== `keepalive`

@@ -68,13 +68,13 @@ describe LogStash::Filters::Http do
       expect(event.get('tags')).to include('_httprequestfailure')
     end
   end
-  context 'when request returns 404 but ignores errors' do
+  context 'failing request with ignorable code' do
     before(:each) { subject.register }
     let(:config) do
       {
         'url' => 'http://httpstat.us/404',
         'target_body' => 'rest',
-        'ignore_errors' => true
+        'ignorable_codes' => [404, 400]
       }
     end
     let(:response) { [404, {}, "request failed"] }
@@ -86,6 +86,27 @@ describe LogStash::Filters::Http do
 
     it "fetches event and returns body" do
       expect(event.get('rest')).to eq("request failed")
+    end
+  end
+  context 'failing request with non matching ignorable code' do
+    before(:each) { subject.register }
+    let(:config) do
+      {
+        'url' => 'http://httpstat.us/404',
+        'target_body' => 'rest',
+        'ignorable_codes' => [500, 400]
+      }
+    end
+    let(:response) { [404, {}, ""] }
+
+    before(:each) do
+      allow(subject).to receive(:request_http).and_return(response)
+      subject.filter(event)
+    end
+
+    it "tags the event with _httprequestfailure" do
+      expect(event).to_not include('rest')
+      expect(event.get('tags')).to include('_httprequestfailure')
     end
   end
   describe "headers" do
