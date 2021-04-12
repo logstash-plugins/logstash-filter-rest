@@ -68,6 +68,47 @@ describe LogStash::Filters::Http do
       expect(event.get('tags')).to include('_httprequestfailure')
     end
   end
+  context 'failing request with ignorable code' do
+    before(:each) { subject.register }
+    let(:config) do
+      {
+        'url' => 'http://httpstat.us/404',
+        'target_body' => 'rest',
+        'ignorable_codes' => [404, 400]
+      }
+    end
+    let(:response) { [404, {}, "request failed"] }
+
+    before(:each) do
+      allow(subject).to receive(:request_http).and_return(response)
+      subject.filter(event)
+    end
+
+    it "fetches event and returns body" do
+      expect(event.get('rest')).to eq("request failed")
+    end
+  end
+  context 'failing request with non matching ignorable code' do
+    before(:each) { subject.register }
+    let(:config) do
+      {
+        'url' => 'http://httpstat.us/404',
+        'target_body' => 'rest',
+        'ignorable_codes' => [500, 400]
+      }
+    end
+    let(:response) { [404, {}, ""] }
+
+    before(:each) do
+      allow(subject).to receive(:request_http).and_return(response)
+      subject.filter(event)
+    end
+
+    it "tags the event with _httprequestfailure" do
+      expect(event).to_not include('rest')
+      expect(event.get('tags')).to include('_httprequestfailure')
+    end
+  end
   describe "headers" do
     before(:each) { subject.register }
     let(:response) { [200, {}, "Bom dia"] }
@@ -197,7 +238,7 @@ describe LogStash::Filters::Http do
         "target_body" => "size"
       }
     end
-    ["GET", "HEAD", "POST", "DELETE"].each do |verb_string|
+    ["GET", "HEAD", "POST", "DELETE", "PUT"].each do |verb_string|
       let(:verb) { verb_string }
       context "when verb #{verb_string} is set" do
         before(:each) { subject.register }

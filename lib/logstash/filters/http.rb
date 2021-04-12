@@ -12,7 +12,7 @@ class LogStash::Filters::Http < LogStash::Filters::Base
 
   config_name 'http'
 
-  VALID_VERBS = ['GET', 'HEAD', 'PATCH', 'DELETE', 'POST']
+  VALID_VERBS = ['GET', 'HEAD', 'PATCH', 'DELETE', 'POST', 'PUT']
 
   config :url, :validate => :string, :required => true
   config :verb, :validate => VALID_VERBS, :required => false, :default => 'GET'
@@ -20,6 +20,7 @@ class LogStash::Filters::Http < LogStash::Filters::Base
   config :query, :validate => :hash, :required => false, :default => {}
   config :body, :required => false
   config :body_format, :validate => ['text', 'json'], :default => "text"
+  config :ignorable_codes, :validate => :number, :list => true
 
   config :target_body, :validate => :string, :default => "body"
   config :target_headers, :validate => :string, :default => "headers"
@@ -65,13 +66,14 @@ class LogStash::Filters::Http < LogStash::Filters::Base
                     :url => url_for_event, :body => body_sprintfed,
                     :client_error => client_error.message)
       @tag_on_request_failure.each { |tag| event.tag(tag) }
-    elsif !code.between?(200, 299)
+    elsif !code.between?(200, 299) and (!@ignorable_codes || !@ignorable_codes.include?(code))
+      # fail, if code is not 2xx AND either ignorable_codes not set at all OR listed codeds do NOT match
       @logger.error('error during HTTP request',
                     :url => url_for_event, :code => code,
                     :response => response_body)
       @tag_on_request_failure.each { |tag| event.tag(tag) }
     else
-      @logger.debug? && @logger.debug('success received',
+      @logger.debug? && @logger.debug('received response',
                                       :code => code, :body => response_body)
       process_response(response_body, response_headers, event)
       filter_matched(event)
